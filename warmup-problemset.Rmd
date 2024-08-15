@@ -311,9 +311,32 @@ master_data |>
 
 ```{r}
 ###Replicate Table 1
-#never_switchers <- sum(is.na(master_data$after))
-#never_switchers
+
+##switchers: TRUE / never-switchers: FALSE
+#abs(): absolute value
+#lag(semester)の最初の行のNAにsemesterの１行目の値を代入
+
+
+transition <- master_data |>
+  group_by(unitid) |>
+  mutate(semester_change = abs(semester - lag(semester, default = first(semester))), 
+         quarter_change = abs(quarter - lag(quarter, default = first(quarter))),
+         switching = (semester_change + quarter_change) > 0)  |>
+  filter(switching == TRUE) |>
+  select(unitid, switching)
+
+##table: dataset containing the column called "switching"
+table <- master_data |>
+  left_join(transition, by = "unitid") |>
+  mutate(switching = if_else(is.na(switching),"Never-Switchers", "Switchers"))
+table
 ```
+
+```{r}
+library(table1)
+
+```
+
 
 ```{r}
 ###Replicate Figure 1: 4-year graduation rate
@@ -394,6 +417,13 @@ library(modelsummary)
 model <- lm(gradrate4yr ~ semester, data = master_data)
 summary(model)
 ```
+```{r}
+##controling per_women_cohort, per_white_cohort, instatetuition
+#model_2 <- lm(gradrate4yr ~ semester + per_women_cohort + per_white_cohort + instatetuition, data = master_data)
+#summary(model_2)
+```
+
+
 
 ```{r}
 ##create and display tables
