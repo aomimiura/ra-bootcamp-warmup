@@ -24,29 +24,28 @@ summary(cars)
 
 You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
+```{r pressure, include = FALSE}
 plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
-
+## **Cleaning**
+### Semester Data
 ```{r}
 library("tidyverse")
-#####Cleaning
 
-###Semester Data
 ##load the dataset
 semester_data_1 <- read_csv("raw/semester_dummy/semester_data_1.csv")
 semester_data_2 <- read_csv("raw/semester_dummy/semester_data_2.csv")
-semester_data_1
-semester_data_2
+head(semester_data_1)
+head(semester_data_2)
 ```
 ```{r}
 ##rename the column names in "semester_data_1"
 semester_data_1 <- semester_data_1 |>
   rename (unitid = x1, instnm = x2, semester = x3, quarter = x4, year = x5, Y = x6)
-semester_data_1
+head(semester_data_1)
 ```
 ```{r}
 ##convert the character into double (numeric)
@@ -55,7 +54,7 @@ semester_data_1
 semester_data_1 <- semester_data_1 |>
   mutate(unitid = as.numeric(unitid), semester = as.numeric(semester), quarter = as.numeric(quarter), year = as.numeric(year), Y = as.numeric(Y)) |>
   slice(-1)
-semester_data_1
+head(semester_data_1)
 ```
 
 
@@ -63,13 +62,13 @@ semester_data_1
 ##rename the column names in "semester_data_2"
 semester_data_2 <- semester_data_2 |>
   rename (unitid = x1, instnm = x2, semester = x3, quarter = x4, year = x5, Y = x6)
-semester_data_2
+head(semester_data_2)
 ```
 
 ```{r}
 ##join the two data sets with bind_rows() because they have exactly the same columns
 semester_data <- bind_rows(semester_data_1, semester_data_2)
-semester_data
+head(semester_data)
 ```
 
 ```{r}
@@ -77,7 +76,7 @@ semester_data
 semester_data <- semester_data |>
   select (-Y) #|>
   ##mutate(instnm = toupper(instnm))
-semester_data
+head(semester_data)
 ```
 
 ```{r}
@@ -89,14 +88,14 @@ transition_year <- semester_data |>
   filter(prev_semester == 0 & semester == 1 & prev_quarter == 1 & quarter == 0) |>
   rename(yearofsem = year) |>
   select (unitid, yearofsem) #should not add "instnm" here as upper cases and lower cases are mixed
-transition_year
+head(transition_year)
 ```
 
 ```{r}
 ##use left_join to merge the two data sets ("semester_data" and "transition_year")
 semester_dummy <- semester_data |>
   left_join (transition_year, by = "unitid") #joined only by "unitid"
-semester_dummy
+head(semester_dummy)
 ```
 
 ```{r}
@@ -129,8 +128,8 @@ cleaned_semester_dummy
 #write_csv(cleaned_semester_dummy, "cleaned_semester_aomi.csv")
 ```
 
+### Gradrate Data (Outcome)
 ```{r}
-###Gradrate Data
 ##use the intermediate data for the tentative use
 
 ##create empty tibble
@@ -151,7 +150,7 @@ head(df_gradrate)
 df_gradrate <- df_gradrate |>
   mutate(women_gradrate_4yr = as.numeric(women_gradrate_4yr)) |>
   mutate(womengradrate4yr = 0.01 * women_gradrate_4yr)
-df_gradrate
+head(df_gradrate)
 ```
 
 ```{r}
@@ -160,7 +159,7 @@ df_gradrate
 df_gradrate <- df_gradrate |>
   mutate(gradrate4yr = tot4yrgrads / totcohortsize,
          mengradrate4yr = m_4yrgrads / m_cohortsize)
-df_gradrate
+head(df_gradrate)
 ```
 
 ```{r}
@@ -168,26 +167,24 @@ df_gradrate
 df_gradrate <- df_gradrate |>
   mutate(gradrate4yr = round(gradrate4yr, digits = 3)) |>
   mutate(mengradrate4yr = round(mengradrate4yr, digits = 3))
-df_gradrate
+head(df_gradrate)
 ```
 
 ```{r}
 ##limit the range of years in the data set
 outcome_data <- df_gradrate |>
   filter (year >= 1991 & year <= 2010)
-outcome_data
+head(outcome_data)
 ```
 ```{r}
 #write_csv(outcome_data, "cleaned_outcome_aomi.csv")
 ```
 
-
+### Covariates Data
 ```{r}
-###Covariates Data
-
 ##load the data
 covariates <- read_csv("raw/covariates_csv_aomi/covariates.csv")
-covariates
+head(covariates)
 ```
 
 ```{r}
@@ -196,7 +193,7 @@ covariates
 covariates <- covariates |>
   rename(unitid = university_id) |>
   mutate(unitid = str_remove_all(unitid, "aaaa"))
-covariates
+head(covariates)
 ```
 
 ```{r}
@@ -207,14 +204,14 @@ covariates
 covariates <- covariates |>
   pivot_wider(names_from = category,
               values_from = value)
-covariates
+head(covariates)
 ```
 
 ```{r}
 ##recall "cleaned_semester_dummy"
-cleaned_semester_dummy
+#cleaned_semester_dummy
 ##recall "outcome_data"
-outcome_data
+#outcome_data
 ```
 
 ```{r}
@@ -228,7 +225,7 @@ unique(outcome_data$year)
 covariates <- covariates |>
   group_by(unitid) |>
   filter (year >= 1991 & year != 1994 & year <= 2010)
-covariates
+head(covariates)
 ```
 ```{r}
 ##see all the unique values existing in the "unitid" column in the "outcome_data" data
@@ -246,15 +243,15 @@ covariates_data <- covariates |>
   filter(unitid %in% (outcome_data$unitid)) |>
   #convert characters into double ("unitid" column)
   mutate(unitid = as.numeric(unitid))
-covariates_data
+head(covariates_data)
 ```
 
 ```{r}
 #write_csv(covariates_data, "cleaned_covariates_aomi.csv")
 ```
 
+### Master Data
 ```{r}
-###Master Data
 ##Semester Data: cleaned_semester_dummy
 ##Gradrate Data: outcome_data
 ##Covariates Data: covariates_data
@@ -293,16 +290,14 @@ master_data
 #write_csv(master_data, "master_data_aomi.csv")
 ```
 
+## **Analysis**
 ```{r}
-#####Analysis
-
 ##count the total number of NAs in "master_data"
 master_data
 #sum(is.na(master_data)) #total number of NAs: 25801
 
 ##load the cleaned master data provided by the organizers
-Master <- read_csv("intermediate_by_organizer/master.csv")
-#sum(is.na(Master))  
+#Master <- read_csv("intermediate_by_organizer/master.csv")
 ```
 
 ```{r}
@@ -310,10 +305,8 @@ Master <- read_csv("intermediate_by_organizer/master.csv")
 master_data |>
   apply(2, function(x) sum(is.na(x))) #1 for row, 2 for column
 ```
-
+### Replicate Table 1
 ```{r}
-###Replicate Table 1
-
 ##switchers: TRUE / never-switchers: FALSE
 #abs(): absolute value
 
@@ -333,13 +326,11 @@ table
 ```
 
 ```{r}
-library(table1)
-
+#library(table1)
 ```
 
-
+### Replicate Figure 1: 4-year graduation rate
 ```{r}
-###Replicate Figure 1: 4-year graduation rate
 library(ggplot2)
 
 avg_gradrate4yr <- master_data |>
@@ -356,8 +347,8 @@ avg_gradrate4yr |>
        y = "4-year Graduation Rate")
 ```
 
+### Replicate Figure 1: fraction of schools on semesters
 ```{r}
-###Replicate Figure 1: fraction of schools on semesters
 semesters_share <- master_data |>
   group_by(year) |>
   mutate(semesters_share = sum(semester) / n())
@@ -407,8 +398,8 @@ plot_gradrate(master_data, per_women_cohort, "skyblue", "Female Student Shares")
 plot_gradrate(master_data, per_white_cohort, "violet", "White Student Shares")
 plot_gradrate(master_data, instatetuition, "springgreen", "Tuition")
 ```
+### Regression Analysis
 ```{r}
-###Regression Analysis
 ##Independent Variable: semester
 ##Dependent Variable: gradrate4yr
 library(modelsummary)
@@ -417,13 +408,12 @@ library(modelsummary)
 model <- lm(gradrate4yr ~ semester, data = master_data)
 summary(model)
 ```
+
 ```{r}
 ##controling per_women_cohort, per_white_cohort, instatetuition
 #model_2 <- lm(gradrate4yr ~ semester + per_women_cohort + per_white_cohort + instatetuition, data = master_data)
 #summary(model_2)
 ```
-
-
 
 ```{r}
 ##create and display tables
