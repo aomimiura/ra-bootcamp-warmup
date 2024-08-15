@@ -131,17 +131,51 @@ cleaned_semester_dummy
 ###Gradrate Data
 ##use the intermediate data for the tentative use
 
-##create an empty list to store the data
-gradrate_list <- list()
+##create empty tibble
+df_gradrate <- tibble()
 
 ##loop through each year from 1991 to 2016
-for (i in 1991:2016) {
+for (i in c(c(1991:1993), c(1995:2016))) { #excluding 1994
   #construct the filename
-  filename <- paste0("outcome_csv/", i, ".csv")
-  gradrate_list[[as.character(i)]] <- read_csv("raw/outcome_csv_aomi/filename")
+  filename <- paste0("raw/outcome_csv_aomi/", i, ".csv")
+  gradrate_data <- read_csv(filename)
+  df_gradrate <- bind_rows(df_gradrate, gradrate_data)  #repeat binding "df_gradrate" and "gradrate_data"
 }
-
+head(df_gradrate)
 ```
+
+```{r}
+##calculate female's 4-year graduation rate
+df_gradrate <- df_gradrate |>
+  mutate(women_gradrate_4yr = as.numeric(women_gradrate_4yr)) |>
+  mutate(womengradrate4yr = 0.01 * women_gradrate_4yr)
+df_gradrate
+```
+
+```{r}
+#calculate total 4-year graduation rate, then covert into numeric factors
+#calculate male's 4-year graduation rate, then covert into numeric factors
+df_gradrate <- df_gradrate |>
+  mutate(gradrate4yr = tot4yrgrads / totcohortsize,
+         mengradrate4yr = m_4yrgrads / m_cohortsize)
+df_gradrate
+```
+
+```{r}
+##use round() to control the number of digit
+df_gradrate <- df_gradrate |>
+  mutate(gradrate4yr = round(gradrate4yr, digits = 3)) |>
+  mutate(mengradrate4yr = round(mengradrate4yr, digits = 3))
+df_gradrate
+```
+
+```{r}
+##limit the range of years in the data set
+outcome_data <- df_gradrate |>
+  filter (year >= 1991 & year <= 2010)
+outcome_data
+```
+
 
 ```{r}
 ###Covariates Data
@@ -174,9 +208,7 @@ covariates
 ```{r}
 ##recall "cleaned_semester_dummy"
 cleaned_semester_dummy
-##load the "outcome"
-outcome_data <- read_csv("cleaning/clean_outcome_duplicate.csv") |>
-  select (-...1)
+##recall "cleaned_semester_dummy"
 outcome_data
 ```
 
@@ -184,7 +216,7 @@ outcome_data
 ##see all the unique values existing in the "year" column of "cleaned_semester_dummy" data
 unique(cleaned_semester_dummy$year)
 
-##see all the unique values existing in the "year" column of "outcome" data
+##see all the unique values existing in the "year" column of "outcome_data"
 unique(outcome_data$year)
 
 ##limit the year duration for "covariates" data
