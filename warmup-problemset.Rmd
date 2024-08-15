@@ -1,0 +1,366 @@
+---
+title: "Warm-up Problemset"
+output: pdf_document
+date: "2024-08-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r}
+library("tidyverse")
+#####Cleaning
+
+###Semester Data
+##load the dataset
+semester_data_1 <- read_csv("raw/semester_dummy/semester_data_1.csv")
+semester_data_2 <- read_csv("raw/semester_dummy/semester_data_2.csv")
+semester_data_1
+semester_data_2
+```
+```{r}
+##rename the column names in "semester_data_1"
+semester_data_1 <- semester_data_1 |>
+  rename (unitid = x1, instnm = x2, semester = x3, quarter = x4, year = x5, Y = x6)
+semester_data_1
+```
+```{r}
+##convert the character into double (numeric)
+##then, delete the first row of the "semester_data_1"
+
+semester_data_1 <- semester_data_1 |>
+  mutate(unitid = as.numeric(unitid), semester = as.numeric(semester), quarter = as.numeric(quarter), year = as.numeric(year), Y = as.numeric(Y)) |>
+  slice(-1)
+semester_data_1
+```
+
+
+```{r}
+##rename the column names in "semester_data_2"
+semester_data_2 <- semester_data_2 |>
+  rename (unitid = x1, instnm = x2, semester = x3, quarter = x4, year = x5, Y = x6)
+semester_data_2
+```
+
+```{r}
+##join the two data sets with bind_rows() because they have exactly the same columns
+semester_data <- bind_rows(semester_data_1, semester_data_2)
+semester_data
+```
+
+```{r}
+##delete the column "Y"
+semester_data <- semester_data |>
+  select (-Y) #|>
+  ##mutate(instnm = toupper(instnm))
+semester_data
+```
+
+```{r}
+##identify the transitioned year for each university
+transition_year <- semester_data |>
+  group_by(unitid) |>
+  mutate(prev_semester = lag(semester),
+         prev_quarter = lag(quarter))  |>
+  filter(prev_semester == 0 & semester == 1 & prev_quarter == 1 & quarter == 0) |>
+  rename(yearofsem = year) |>
+  select (unitid, yearofsem) #should not add "instnm" here as upper cases and lower cases are mixed
+transition_year
+```
+
+```{r}
+##use left_join to merge the two data sets ("semester_data" and "transition_year")
+semester_dummy <- semester_data |>
+  left_join (transition_year, by = "unitid") #joined only by "unitid"
+semester_dummy
+```
+
+```{r}
+##finalizing the cleaning of the semester data
+##create a dummy variable which shows 0 if semesters were yet to be introduced and 1 if already introduced
+cleaned_semester_dummy <- semester_dummy |>
+  group_by(unitid) |>
+  mutate(after = if_else(year < yearofsem, "0", "1")) |>
+  mutate(after = as.numeric(after))
+cleaned_semester_dummy
+```
+
+
+```{r}
+##checking the number of NAs in "cleaned_semester_dummy"
+#sum(is.na(cleaned_semester_dummy)) #total number of NAs: 25688
+
+##the semester data set provided by the organizer
+#semester_by_organizer <- read_csv("intermediate_by_organizer/clean_semester_dummy.csv") |>
+  #select(-1)
+#s#emester_by_organizer
+#checking the number of NAs in "semester_by_organizer"
+#sum(is.na(semester_by_organizer)) #identical with "cleaned_semester_dummy"
+```
+
+
+```{r}
+##save this cleaned data set "cleaned_semester_dummy" as a .csv file
+##remember to add ".csv" at the end
+#write_csv(cleaned_semester_dummy, "cleaned_semester_aomi.csv")
+```
+
+```{r}
+###Gradrate Data
+##use the intermediate data for the tentative use
+
+##create an empty list to store the data
+gradrate_list <- list()
+
+##loop through each year from 1991 to 2016
+for (i in 1991:2016) {
+  #construct the filename
+  filename <- paste0("outcome_csv/", i, ".csv")
+  gradrate_list[[as.character(i)]] <- read_csv("raw/outcome_csv_aomi/filename")
+}
+
+```
+
+```{r}
+###Covariates Data
+
+##load the data
+covariates <- read_csv("raw/covariates_csv_aomi/covariates.csv")
+covariates
+```
+
+```{r}
+##rename the column name from "university_id" into "unitid"
+##then, create a new column with the same name while removing "aaaa" from each row
+covariates <- covariates |>
+  rename(unitid = university_id) |>
+  mutate(unitid = str_remove_all(unitid, "aaaa"))
+covariates
+```
+
+```{r}
+##see all the unique values in the "category" column
+#unique(covariates$category)
+
+##use "pivot_wider" to transfer the dataset
+covariates <- covariates |>
+  pivot_wider(names_from = category,
+              values_from = value)
+covariates
+```
+
+```{r}
+##recall "cleaned_semester_dummy"
+cleaned_semester_dummy
+##load the "outcome"
+outcome_data <- read_csv("cleaning/clean_outcome_duplicate.csv") |>
+  select (-...1)
+outcome_data
+```
+
+```{r}
+##see all the unique values existing in the "year" column of "cleaned_semester_dummy" data
+unique(cleaned_semester_dummy$year)
+
+##see all the unique values existing in the "year" column of "outcome" data
+unique(outcome_data$year)
+
+##limit the year duration for "covariates" data
+covariates <- covariates |>
+  group_by(unitid) |>
+  filter (year >= 1991 & year != 1994 & year <= 2010)
+covariates
+```
+```{r}
+##see all the unique values existing in the "unitid" column in the "outcome_data" data
+#unique(outcome_data$unitid)
+##see all the unique values existing in the "unitid" column in the "covariates" data
+#unique(covariates$unitid)
+
+##filter the "unitid" column to keep only the rows that have the same value in "outcome_data" data set.
+
+#pipe operators cannot be used within functions
+#"unitid == outcome_data$unitid": This checks if unitid is equal to the entire vector outcome$unitid, which is not what you want if outcome$unitid contains multiple values. It would result in a logical vector of TRUE/FALSE that doesn't directly help in filtering rows.
+#"unitid %in% outcome_data$unitid": This checks if each value in unitid is present in the outcome$unitid vector. It creates a logical vector where each element is TRUE if the corresponding unitid value is found in outcome$unitid and FALSE otherwise. This is useful for filtering rows based on the presence of values in a list or vector.
+
+covariates_data <- covariates |>
+  filter(unitid %in% (outcome_data$unitid)) |>
+  #convert characters into double ("unitid" column)
+  mutate(unitid = as.numeric(unitid))
+covariates_data
+```
+
+```{r}
+#write_csv(covariates_data, "cleaned_covariates_aomi.csv")
+```
+
+```{r}
+###Master Data
+##Semester Data: cleaned_semester_dummy
+##Gradrate Data: outcome_data
+##Covariates Data: covariates_data
+cleaned_semester_dummy
+outcome_data
+covariates_data
+```
+
+```{r}
+##combine three data sets by "unitid (double)"
+pre_master_data <- cleaned_semester_dummy |>
+  left_join(outcome_data, by = c("unitid", "year"))
+pre_master_data
+
+master_data <- pre_master_data |>
+  left_join(covariates_data, by = c("unitid", "year")) |>
+  #calculate the ratio of women cohorts and white cohorts, respectively
+  mutate(per_white_cohort = white_cohortsize / totcohortsize,
+         per_women_cohort = w_cohortsize / totcohortsize)
+master_data
+ 
+```
+
+```{r}
+### Compare my cleaned data and data by organizer (covariates data) : identical!
+##mine
+#sum(is.na(covariates_data)) #total number of NAs: 0
+
+##by organizer
+#covariates_by_organizer <- read_csv("intermediate_by_organizer/clean_covariates.csv")
+#sum(is.na(covariates_by_organizer)) #total number of NAs: 0
+```
+
+
+```{r}
+#write_csv(master_data, "master_data_aomi.csv")
+```
+
+```{r}
+#####Analysis
+
+##count the total number of NAs in "master_data"
+master_data
+#sum(is.na(master_data)) #total number of NAs: 25801
+
+##load the cleaned master data provided by the organizers
+Master <- read_csv("intermediate_by_organizer/master.csv")
+#sum(is.na(Master))  
+```
+
+```{r}
+##count the number of NAs in each column in "master_data"
+master_data |>
+  apply(2, function(x) sum(is.na(x))) #1 for row, 2 for column
+```
+
+```{r}
+###Replicate Table 1
+#never_switchers <- sum(is.na(master_data$after))
+#never_switchers
+```
+
+```{r}
+###Replicate Figure 1: 4-year graduation rate
+library(ggplot2)
+
+avg_gradrate4yr <- master_data |>
+  group_by(year) |>
+  mutate(avg_gradrate4yr = mean(gradrate4yr))
+
+avg_gradrate4yr |>
+  ggplot(mapping = aes(x = year,
+                       y = avg_gradrate4yr)) +
+  geom_line() +
+  xlim(1990, 2010) + #set the minimum and maximum limits on the x-axis
+  ylim(0.25, 0.45) +
+  labs(x = "Year",
+       y = "4-year Graduation Rate")
+```
+
+```{r}
+###Replicate Figure 1: fraction of schools on semesters
+semesters_share <- master_data |>
+  group_by(year) |>
+  mutate(semesters_share = sum(semester) / n())
+
+semesters_share |>
+  ggplot(mapping = aes(x = year, 
+                       y = semesters_share)) +
+  geom_line() +
+  xlim(1990, 2010) + 
+  ylim(0.8, 1.0) +
+  labs (x = "Year",
+        y = "Fractions of Schools on Semesters") 
+```
+
+```{r}
+###Scatter Plot
+#colors()
+
+##if creating the scatter plots manually:
+#master_data |>
+  #ggplot(mapping = aes(x = per_women_cohort, y = gradrate4yr)) +
+  #geom_point(color = "skyblue", alpha = 0.5)
+
+#master_data |>
+  #ggplot(mapping = aes(x = per_white_cohort, y = gradrate4yr)) +
+  #geom_point(color = "violet", alpha = 0.5)
+
+#master_data |>
+  #ggplot(mapping = aes(x = instatetuition, y = gradrate4yr)) +
+  #geom_point(color = "springgreen", alpha = 0.5)
+
+##if using rlang package
+library(rlang)
+library(ggplot2)
+
+
+plot_gradrate <- function(data, xvar, color_value, xaxis) {
+  xvar <- enquo(xvar) #quosing
+  
+  ggplot(data, mapping = aes(x = !!xvar, y = gradrate4yr)) +　#dynamic
+    geom_point(color = color_value, alpha = 0.5) + #static
+    labs(x = xaxis, #static
+       y = "4-year Graduation Rate")
+}
+
+plot_gradrate(master_data, per_women_cohort, "skyblue", "Female Student Shares")
+plot_gradrate(master_data, per_white_cohort, "violet", "White Student Shares")
+plot_gradrate(master_data, instatetuition, "springgreen", "Tuition")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
