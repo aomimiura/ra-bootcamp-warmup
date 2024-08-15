@@ -384,6 +384,21 @@ plot_gradrate(master_data, per_women_cohort, "skyblue", "Female Student Shares")
 plot_gradrate(master_data, per_white_cohort, "violet", "White Student Shares")
 plot_gradrate(master_data, instatetuition, "springgreen", "Tuition")
 ```
+```{r}
+###Regression Analysis
+##Independent Variable: semester
+##Dependent Variable: gradrate4yr
+library(modelsummary)
+
+##run linear regression
+model <- lm(gradrate4yr ~ semester, data = master_data)
+summary(model)
+```
+
+```{r}
+##create and display tables
+modelsummary(model)
+```
 
 
 
