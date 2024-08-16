@@ -359,9 +359,8 @@ semesters_share |>
   labs (x = "Year",
         y = "Fractions of Schools on Semesters") 
 ```
-
+###Scatter Plots
 ```{r}
-###Scatter Plot
 #colors()
 
 ##if creating the scatter plots manually:
@@ -392,7 +391,7 @@ plot_gradrate <- function(data, xvar, color_value, xaxis) {
 
 plot_gradrate(master_data, per_women_cohort, "skyblue", "Female Student Shares")
 plot_gradrate(master_data, per_white_cohort, "violet", "White Student Shares")
-plot_gradrate(master_data, instatetuition, "springgreen", "Tuition")
+plot_gradrate(master_data, instatetuition, "green", "Tuition")
 ```
 ### Regression Analysis
 ```{r}
