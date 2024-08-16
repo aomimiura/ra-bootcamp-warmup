@@ -7,7 +7,7 @@ date: "2024-08-08"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
 ## R Markdown
@@ -16,19 +16,6 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, include = FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 ## **Cleaning**
 ### Semester Data
@@ -45,8 +32,9 @@ head(semester_data_2)
 ##rename the column names in "semester_data_1"
 semester_data_1 <- semester_data_1 |>
   rename (unitid = x1, instnm = x2, semester = x3, quarter = x4, year = x5, Y = x6)
-head(semester_data_1)
+#head(semester_data_1)
 ```
+
 ```{r}
 ##convert the character into double (numeric)
 ##then, delete the first row of the "semester_data_1"
@@ -54,7 +42,7 @@ head(semester_data_1)
 semester_data_1 <- semester_data_1 |>
   mutate(unitid = as.numeric(unitid), semester = as.numeric(semester), quarter = as.numeric(quarter), year = as.numeric(year), Y = as.numeric(Y)) |>
   slice(-1)
-head(semester_data_1)
+#head(semester_data_1)
 ```
 
 
@@ -62,13 +50,13 @@ head(semester_data_1)
 ##rename the column names in "semester_data_2"
 semester_data_2 <- semester_data_2 |>
   rename (unitid = x1, instnm = x2, semester = x3, quarter = x4, year = x5, Y = x6)
-head(semester_data_2)
+#head(semester_data_2)
 ```
 
 ```{r}
 ##join the two data sets with bind_rows() because they have exactly the same columns
 semester_data <- bind_rows(semester_data_1, semester_data_2)
-head(semester_data)
+#head(semester_data)
 ```
 
 ```{r}
@@ -76,34 +64,36 @@ head(semester_data)
 semester_data <- semester_data |>
   select (-Y) #|>
   ##mutate(instnm = toupper(instnm))
-head(semester_data)
+#head(semester_data)
 ```
 
 ```{r}
 ##identify the transitioned year for each university
 transition_year <- semester_data |>
-  group_by(unitid) |>
+  #group_by(unitid) |>
   mutate(prev_semester = lag(semester),
-         prev_quarter = lag(quarter))  |>
+         prev_quarter = lag(quarter),
+         .by = year)  |>
   filter(prev_semester == 0 & semester == 1 & prev_quarter == 1 & quarter == 0) |>
   rename(yearofsem = year) |>
   select (unitid, yearofsem) #should not add "instnm" here as upper cases and lower cases are mixed
-head(transition_year)
+#head(transition_year)
 ```
 
 ```{r}
 ##use left_join to merge the two data sets ("semester_data" and "transition_year")
 semester_dummy <- semester_data |>
   left_join (transition_year, by = "unitid") #joined only by "unitid"
-head(semester_dummy)
+#head(semester_dummy)
 ```
 
 ```{r}
 ##finalizing the cleaning of the semester data
 ##create a dummy variable which shows 0 if semesters were yet to be introduced and 1 if already introduced
 cleaned_semester_dummy <- semester_dummy |>
-  group_by(unitid) |>
-  mutate(after = if_else(year < yearofsem, "0", "1")) |>
+  #group_by(unitid) |>
+  mutate(after = if_else(year < yearofsem, "0", "1"),
+         .by = year) |>
   mutate(after = as.numeric(after))
 cleaned_semester_dummy
 ```
@@ -150,7 +140,7 @@ head(df_gradrate)
 df_gradrate <- df_gradrate |>
   mutate(women_gradrate_4yr = as.numeric(women_gradrate_4yr)) |>
   mutate(womengradrate4yr = 0.01 * women_gradrate_4yr)
-head(df_gradrate)
+#head(df_gradrate)
 ```
 
 ```{r}
@@ -159,7 +149,7 @@ head(df_gradrate)
 df_gradrate <- df_gradrate |>
   mutate(gradrate4yr = tot4yrgrads / totcohortsize,
          mengradrate4yr = m_4yrgrads / m_cohortsize)
-head(df_gradrate)
+#head(df_gradrate)
 ```
 
 ```{r}
@@ -167,15 +157,16 @@ head(df_gradrate)
 df_gradrate <- df_gradrate |>
   mutate(gradrate4yr = round(gradrate4yr, digits = 3)) |>
   mutate(mengradrate4yr = round(mengradrate4yr, digits = 3))
-head(df_gradrate)
+#head(df_gradrate)
 ```
 
 ```{r}
 ##limit the range of years in the data set
 outcome_data <- df_gradrate |>
   filter (year >= 1991 & year <= 2010)
-head(outcome_data)
+outcome_data
 ```
+
 ```{r}
 #write_csv(outcome_data, "cleaned_outcome_aomi.csv")
 ```
@@ -184,7 +175,7 @@ head(outcome_data)
 ```{r}
 ##load the data
 covariates <- read_csv("raw/covariates_csv_aomi/covariates.csv")
-head(covariates)
+#head(covariates)
 ```
 
 ```{r}
@@ -193,7 +184,7 @@ head(covariates)
 covariates <- covariates |>
   rename(unitid = university_id) |>
   mutate(unitid = str_remove_all(unitid, "aaaa"))
-head(covariates)
+#head(covariates)
 ```
 
 ```{r}
@@ -204,7 +195,7 @@ head(covariates)
 covariates <- covariates |>
   pivot_wider(names_from = category,
               values_from = value)
-head(covariates)
+#head(covariates)
 ```
 
 ```{r}
@@ -225,7 +216,7 @@ unique(outcome_data$year)
 covariates <- covariates |>
   group_by(unitid) |>
   filter (year >= 1991 & year != 1994 & year <= 2010)
-head(covariates)
+#head(covariates)
 ```
 ```{r}
 ##see all the unique values existing in the "unitid" column in the "outcome_data" data
@@ -243,7 +234,7 @@ covariates_data <- covariates |>
   filter(unitid %in% (outcome_data$unitid)) |>
   #convert characters into double ("unitid" column)
   mutate(unitid = as.numeric(unitid))
-head(covariates_data)
+#head(covariates_data)
 ```
 
 ```{r}
@@ -255,16 +246,16 @@ head(covariates_data)
 ##Semester Data: cleaned_semester_dummy
 ##Gradrate Data: outcome_data
 ##Covariates Data: covariates_data
-cleaned_semester_dummy
-outcome_data
-covariates_data
+#cleaned_semester_dummy
+#outcome_data
+#covariates_data
 ```
 
 ```{r}
 ##combine three data sets by "unitid (double)"
 pre_master_data <- cleaned_semester_dummy |>
   left_join(outcome_data, by = c("unitid", "year"))
-pre_master_data
+#pre_master_data
 
 master_data <- pre_master_data |>
   left_join(covariates_data, by = c("unitid", "year")) |>
@@ -293,7 +284,7 @@ master_data
 ## **Analysis**
 ```{r}
 ##count the total number of NAs in "master_data"
-master_data
+#master_data
 #sum(is.na(master_data)) #total number of NAs: 25801
 
 ##load the cleaned master data provided by the organizers
@@ -306,7 +297,7 @@ master_data |>
   apply(2, function(x) sum(is.na(x))) #1 for row, 2 for column
 ```
 ### Replicate Table 1
-```{r}
+```{r eval = FALSE}
 ##switchers: TRUE / never-switchers: FALSE
 #abs(): absolute value
 
@@ -322,20 +313,26 @@ transition <- master_data |>
 table <- master_data |>
   left_join(transition, by = "unitid") |>
   mutate(switching = if_else(is.na(switching),"Never-Switchers", "Switchers"))
-table
+head(table)
 ```
-
 ```{r}
-#library(table1)
+##compare the graduation rate between semesters and non-semesters
+master_data |>
+  summarize(
+    mean = mean(gradrate4yr, na.rm = TRUE),
+    sd = sd(gradrate4yr, na.rm = TRUE),
+    .by = semester
+  ) |>
+  knitr::kable(col.names = c("Semester", "Mean_Gradiation_Rate", "Standard_Deviation"))
 ```
 
-### Replicate Figure 1: 4-year graduation rate
+### Replicate Figure 1: 4-year Graduation Rate
 ```{r}
 library(ggplot2)
 
 avg_gradrate4yr <- master_data |>
-  group_by(year) |>
-  mutate(avg_gradrate4yr = mean(gradrate4yr))
+  mutate(avg_gradrate4yr = mean(gradrate4yr),
+         .by = year)
 
 avg_gradrate4yr |>
   ggplot(mapping = aes(x = year,
@@ -350,8 +347,8 @@ avg_gradrate4yr |>
 ### Replicate Figure 1: fraction of schools on semesters
 ```{r}
 semesters_share <- master_data |>
-  group_by(year) |>
-  mutate(semesters_share = sum(semester) / n())
+  mutate(semesters_share = sum(semester) / n(),
+         .by = year)
 
 semesters_share |>
   ggplot(mapping = aes(x = year, 
@@ -384,7 +381,6 @@ semesters_share |>
 library(rlang)
 library(ggplot2)
 
-
 plot_gradrate <- function(data, xvar, color_value, xaxis) {
   xvar <- enquo(xvar) #quosing
   
@@ -407,12 +403,6 @@ library(modelsummary)
 ##run linear regression
 model <- lm(gradrate4yr ~ semester, data = master_data)
 summary(model)
-```
-
-```{r}
-##controling per_women_cohort, per_white_cohort, instatetuition
-#model_2 <- lm(gradrate4yr ~ semester + per_women_cohort + per_white_cohort + instatetuition, data = master_data)
-#summary(model_2)
 ```
 
 ```{r}
